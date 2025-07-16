@@ -231,13 +231,16 @@ function configureCommandlineSwitchesSync(cliArgs: NativeParsedArgs) {
 		'proxy-bypass-list'
 	];
 
-	if (process.platform === 'linux') {
+	if (process.platform === 'linux' || process.platform === 'ohos') {
 
 		// Force enable screen readers on Linux via this flag
 		SUPPORTED_ELECTRON_SWITCHES.push('force-renderer-accessibility');
 
 		// override which password-store is used on Linux
 		SUPPORTED_ELECTRON_SWITCHES.push('password-store');
+
+		// TODO:
+		recordUserDirs();
 	}
 
 	const SUPPORTED_MAIN_PROCESS_SWITCHES = [
@@ -438,6 +441,25 @@ function getArgvConfigPath(): string {
 	}
 
 	return path.join(os.homedir(), dataFolderName!, 'argv.json');
+}
+
+function recordUserDirs(): void {
+	const userDir = process.platform === 'ohos' ? `/data/storage/el2/base/files/var/${product.applicationName}/user-dirs` : `/var/${product.applicationName}/user-dirs`;
+	let userDirs = '';
+	let dirList: string[] = [];
+	try {
+		if (fs.existsSync(userDir)) {
+			userDirs = fs.readFileSync(userDir, 'utf8');
+		}
+		if (userDirs) {
+			dirList = userDirs.trim().split('\n');
+		}
+		dirList.push(path.join(os.homedir(), product.dataFolderName ?? ''), userDataPath);
+		fs.writeFileSync(userDir, `${[...new Set(dirList)].join('\n')}\n`);
+		fs.chmodSync(userDir, '666');
+	} catch (error) {
+		console.error(`Unable to record user directories, ${error}`);
+	}
 }
 
 function configureCrashReporter(): void {

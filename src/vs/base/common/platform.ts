@@ -10,6 +10,7 @@ export const LANGUAGE_DEFAULT = 'en';
 let _isWindows = false;
 let _isMacintosh = false;
 let _isLinux = false;
+let _isOhos = false;
 let _isLinuxSnap = false;
 let _isNative = false;
 let _isWeb = false;
@@ -75,6 +76,7 @@ if (typeof nodeProcess === 'object') {
 	_isWindows = (nodeProcess.platform === 'win32');
 	_isMacintosh = (nodeProcess.platform === 'darwin');
 	_isLinux = (nodeProcess.platform === 'linux');
+	_isOhos = (nodeProcess.platform === 'ohos');
 	_isLinuxSnap = _isLinux && !!nodeProcess.env['SNAP'] && !!nodeProcess.env['SNAP_REVISION'];
 	_isElectron = isElectronProcess;
 	_isCI = !!nodeProcess.env['CI'] || !!nodeProcess.env['BUILD_ARTIFACTSTAGINGDIRECTORY'] || !!nodeProcess.env['GITHUB_WORKSPACE'];
@@ -101,6 +103,7 @@ else if (typeof navigator === 'object' && !isElectronRenderer) {
 	_isMacintosh = _userAgent.indexOf('Macintosh') >= 0;
 	_isIOS = (_userAgent.indexOf('Macintosh') >= 0 || _userAgent.indexOf('iPad') >= 0 || _userAgent.indexOf('iPhone') >= 0) && !!navigator.maxTouchPoints && navigator.maxTouchPoints > 0;
 	_isLinux = _userAgent.indexOf('Linux') >= 0;
+	_isOhos = _userAgent.toLowerCase().indexOf('ohos') >= 0;
 	_isMobile = _userAgent?.indexOf('Mobi') >= 0;
 	_isWeb = true;
 	_language = nls.getNLSLanguage() || LANGUAGE_DEFAULT;
@@ -142,6 +145,7 @@ if (_isMacintosh) {
 export const isWindows = _isWindows;
 export const isMacintosh = _isMacintosh;
 export const isLinux = _isLinux;
+export const isOhos = _isOhos;
 export const isLinuxSnap = _isLinuxSnap;
 export const isNative = _isNative;
 export const isElectron = _isElectron;
@@ -251,9 +255,10 @@ export const setTimeout0 = (() => {
 export const enum OperatingSystem {
 	Windows = 1,
 	Macintosh = 2,
-	Linux = 3
+	Linux = 3,
+	Ohos = 4
 }
-export const OS = (_isMacintosh || _isIOS ? OperatingSystem.Macintosh : (_isWindows ? OperatingSystem.Windows : OperatingSystem.Linux));
+export const OS = (_isMacintosh || _isIOS ? OperatingSystem.Macintosh : (_isWindows ? OperatingSystem.Windows : (_isOhos ? OperatingSystem.Ohos : OperatingSystem.Linux)));
 
 let _isLittleEndian = true;
 let _isLittleEndianComputed = false;

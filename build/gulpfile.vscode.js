@@ -7,6 +7,7 @@
 
 const gulp = require('gulp');
 const fs = require('fs');
+const fsp = fs.promises;
 const path = require('path');
 const es = require('event-stream');
 const vfs = require('vinyl-fs');
@@ -205,6 +206,12 @@ function computeChecksum(filename) {
 		.replace(/=+$/, '');
 
 	return hash;
+}
+
+async function copyDirectoryRecursive(source, destination) {
+	await fsp.rm(destination, { recursive: true, force: true });
+	await fsp.mkdir(path.dirname(destination), { recursive: true });
+	await fsp.cp(source, destination, { recursive: true, force: true });
 }
 
 function packageTask(platform, arch, sourceFolderName, destinationFolderName, opts) {
@@ -497,11 +504,26 @@ BUILD_TARGETS.forEach(buildTarget => {
 			packageTask(platform, arch, sourceFolderName, destinationFolderName, opts)
 		];
 
+		const postprocessTasks = [];
+
+		if (platform === 'linux' && arch === 'arm64' && !minified) {
+			const copySource = path.join(buildRoot, destinationFolderName, 'resources', 'app');
+			const copyDestination = path.join(buildRoot, 'web_engine', 'src', 'main', 'resources', 'resfile', 'resources', 'app');
+			const postprocessTask = task.define('vscode-linux-arm64-deep-copy', async () => {
+				await fsp.access(copySource).catch(() => {
+					throw new Error(`Cannot find source directory ${copySource}`);
+				});
+				await copyDirectoryRecursive(copySource, copyDestination);
+			});
+			postprocessTasks.push(postprocessTask);
+			gulp.task(postprocessTask);
+		}
+
 		if (platform === 'win32') {
 			tasks.push(patchWin32DependenciesTask(destinationFolderName));
 		}
 
-		const vscodeTaskCI = task.define(`vscode${dashed(platform)}${dashed(arch)}${dashed(minified)}-ci`, task.series(...tasks));
+		const vscodeTaskCI = task.define(`vscode${dashed(platform)}${dashed(arch)}${dashed(minified)}-ci`, task.series(...tasks, ...postprocessTasks));
 		gulp.task(vscodeTaskCI);
 
 		const vscodeTask = task.define(`vscode${dashed(platform)}${dashed(arch)}${dashed(minified)}`, task.series(
